@@ -1,0 +1,89 @@
+let font;
+
+// ⚠️ Jusqu'à 5 mots max (a..j)
+const words = ['Nous vous', 'souhaitons', 'à tous', 'un joyeux', 'NOËL']; 
+
+// Booléen pour échapper ou non les guillemets
+const escapeQuotes = false;  // Met à false si tu veux les guillemets non échappés
+
+function preload() {
+  // Nom EXACT de ta police uploadée dans l’éditeur
+  font = loadFont('Roboto-Regular.ttf');
+}
+
+function setup() {
+  createCanvas(800, 450); // même taille que ton visuel Vega
+  const fontSize = 100;
+  const sampleFactor = 0.05;
+  const simplifyThreshold = 0;
+
+  // 1. Générer les points (x,y) pour chaque mot, centrés dans le canvas
+  const wordPoints = words.map(w => {
+    const pts = font.textToPoints(w, 0, 0, fontSize, {
+      sampleFactor,
+      simplifyThreshold
+    });
+
+    const bounds = font.textBounds(w, 0, 0, fontSize);
+    const offsetX = (width - bounds.w) / 2 - bounds.x;
+    const offsetY = (height - bounds.h) / 2 - bounds.y;
+
+    return pts.map(p => ({
+      x: p.x + offsetX,
+      y: p.y + offsetY
+    }));
+  });
+
+  // 2. Nombre max de points parmi tous les mots
+  const maxPoints = wordPoints.reduce(
+    (m, arr) => Math.max(m, arr.length),
+    0
+  );
+
+  // 3. Construire la liste d’objets {a,b,c,d,e,f,g,h,i,j}
+  const defaultX = 300;
+  const defaultY = 0;
+
+  const xFields = ['a', 'c', 'e', 'g', 'i'];
+  const yFields = ['b', 'd', 'f', 'h', 'j'];
+
+  const output = [];
+
+  for (let i = 0; i < maxPoints; i++) {
+    const row = {};
+
+    for (let wIndex = 0; wIndex < 5; wIndex++) {
+      const fx = xFields[wIndex];
+      const fy = yFields[wIndex];
+
+      const pts = wordPoints[wIndex]; // peut être undefined si < nb de mots
+
+      // Échapper les noms de clés si nécessaire
+      const escapedFx = escapeQuotes ? `"${fx}"` : fx;
+      const escapedFy = escapeQuotes ? `"${fy}"` : fy;
+
+      if (pts && i < pts.length) {
+        // coord du point i pour ce mot
+        row[escapedFx] = escapeQuotes ? `"${String(pts[i].x)}"` : String(pts[i].x);
+        row[escapedFy] = escapeQuotes ? `"${String(pts[i].y)}"` : String(pts[i].y);
+      } else {
+        // pas de point → valeur parking "300" / "0"
+        row[escapedFx] = escapeQuotes ? `"${String(defaultX)}"` : String(defaultX);
+        row[escapedFy] = escapeQuotes ? `"${String(defaultY)}"` : String(defaultY);
+      }
+    }
+
+    output.push(row);
+  }
+
+  // 4. Affichage du JSON dans la console
+  console.log(JSON.stringify(output, null, 2));
+
+  // 5. (Optionnel) afficher le premier mot pour contrôle visuel
+  background(0);
+  fill(255);
+  noStroke();
+  wordPoints[1].forEach(p => circle(p.x, p.y, 4));
+
+  noLoop();
+}
